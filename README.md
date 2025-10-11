@@ -42,7 +42,7 @@ import * as LocAR from 'locar';
 as long as you include `locar` as a dependency, e.g. in your `package.json`:
 ```
 "dependencies": {
-   "locar" : "^0.1.0",
+   "locar" : "^0.1.1",
    "three" : "^0.175.0"
 }
 ```
@@ -59,7 +59,7 @@ Please see [here](https://github.com/AR-js-org/locar.js/blob/master/docs/tutoria
 
 ## Contributors
 
-Many thanks to all contributors to the project, in particular [Darian Elias Weiß](https://github.com/darianwwu) and [Kazuhiro Matsuyama](https://github.com/ma2yama) for providing extremely valuable iOS fixes and enhancements.
+Many thanks to all contributors to the project, in particular [Darian Elias Weiß](https://github.com/darianwwu), [Kazuhiro Matsuyama](https://github.com/ma2yama) and [Luigi Mannoni](https://github.com/luigimannoni-smartify) for providing extremely valuable iOS fixes and enhancements.
 
 ## Disclaimer
 

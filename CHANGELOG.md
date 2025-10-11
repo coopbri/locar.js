@@ -1,5 +1,9 @@
 # Updates
 
+## `0.1.1` (2025-10-11)
+
+Allow inline styling of the iOS permission dialogs for device orientation, as well as providing a more iOS-native style by default (PR #22). Thanks to [Luigi Mannoni](https://github.com/luigimannoni-smartify) for this.
+
 ## `0.1.0` (2025-08-23). 
 
 With significant improvements particularly on the iOS side, it's been decided to move up to an `0.1.0` release. Note that there are a few **breaking changes** with 0.1.0, particularly with initialising the `Webcam` and the `DeviceOrientationControls`. Please see the examples and the tutorial.
