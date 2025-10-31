@@ -1,5 +1,9 @@
 # Updates
 
+## `0.1.2` (2025-10-31).
+
+Added TypeScript types, closing [PR #14](https://github.com/AR-js-org/locar.js/issues/14).
+
 ## `0.1.1` (2025-10-11)
 
 Allow inline styling of the iOS permission dialogs for device orientation, as well as providing a more iOS-native style by default (PR #22). Thanks to [Luigi Mannoni](https://github.com/luigimannoni-smartify) for this.
