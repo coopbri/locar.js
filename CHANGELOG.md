@@ -1,6 +1,6 @@
 # Updates
 
-## `0.1.3` (2025-11-15).
+## `0.1.4` (2025-11-15).
 
 Added `getLastKnownLocation() `method to `LocAR.LocationBased`, allowing retrieval of last known GPS location. Useful for example if you want to use fake GPS and retrieve the fake GPS location later.
 

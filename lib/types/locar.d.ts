@@ -129,7 +129,7 @@ declare module "locar" {
     setElevation(elev: number): void;
 
     /**
-     * Gwet last known location.
+     * Get last known location.
      */
     getLastKnownLocation(): LonLat | null;
 
