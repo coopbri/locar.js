@@ -1,5 +1,9 @@
 # Updates
 
+## `0.1.3` (2025-11-15).
+
+Added `getLastKnownLocation() `method to `LocAR.LocationBased`, allowing retrieval of last known GPS location. Useful for example if you want to use fake GPS and retrieve the fake GPS location later.
+
 ## `0.1.2` (2025-10-31).
 
 Added TypeScript types, closing [PR #14](https://github.com/AR-js-org/locar.js/issues/14).

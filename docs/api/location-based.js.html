@@ -26,14 +26,14 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>import  SphMercProjection  from "./sphmerc-projection.js";
-import EventEmitter from './event-emitter.js';
+            <pre class="prettyprint source linenums"><code>import SphMercProjection from "./sphmerc-projection.js";
+import EventEmitter from "./event-emitter.js";
 import * as THREE from "three";
-
 
 /** The main class for the LocAR.js system.  */
 class LocationBased extends EventEmitter {
   #proj;
+  // eslint-disable-next-line no-unused-private-class-members
   #eventHandlers;
   #lastCoords;
   #gpsMinDistance;
@@ -46,7 +46,7 @@ class LocationBased extends EventEmitter {
 
   /**
    * @param {THREE.Scene} scene - The Three.js scene to use.
-   * @param {THREE.Camera} camera - The Three.js camera to use. Should usually 
+   * @param {THREE.Camera} camera - The Three.js camera to use. Should usually
    * be a THREE.PerspectiveCamera.
    * @param {Object} options - Initialisation options for the GPS; see
    * setGpsOptions() below.
@@ -70,8 +70,8 @@ class LocationBased extends EventEmitter {
 
   /**
    * Set the projection to use.
-   * @param {Object} any object which includes a project() method 
-   * taking longitude and latitude as arguments and returning an array 
+   * @param {Object} any object which includes a project() method
+   * taking longitude and latitude as arguments and returning an array
    * containing easting and northing.
    */
   setProjection(proj) {
@@ -82,7 +82,7 @@ class LocationBased extends EventEmitter {
    * Set the GPS options.
    * @param {Object} object containing gpsMinDistance and/or gpsMinAccuracy
    * properties. The former specifies the number of metres which the device
-   * must move to process a new GPS reading, and the latter specifies the 
+   * must move to process a new GPS reading, and the latter specifies the
    * minimum accuracy, in metres, for a GPS reading to be counted.
    */
   setGpsOptions(options = {}) {
@@ -100,10 +100,10 @@ class LocationBased extends EventEmitter {
    * GPS errors can be handled by handling the gpserror event.
    */
   async startGps() {
-    if(this.#serverLogger) {
+    if (this.#serverLogger) {
       const response = await this.#serverLogger.sendData("/gps/start", {
         gpsMinDistance: this.#gpsMinDistance,
-        gpsMinAccuracy: this.#gpsMinAccuracy
+        gpsMinAccuracy: this.#gpsMinAccuracy,
       });
       const json = await response.json();
       this.#session = json.session;
@@ -115,10 +115,10 @@ class LocationBased extends EventEmitter {
         },
         (error) => {
           /**
-            * GPS error event.
-            * @event LocationBased#gpserror
-            * @param {Object} error - the Geolocation API error object. 
-            */
+           * GPS error event.
+           * @event LocationBased#gpserror
+           * @param {Object} error - the Geolocation API error object.
+           */
           this.emit("gpserror", error);
         },
         {
@@ -162,7 +162,7 @@ class LocationBased extends EventEmitter {
       coords: {
         longitude: lon,
         latitude: lat,
-        accuracy: acc
+        accuracy: acc,
       },
     });
   }
@@ -194,21 +194,21 @@ class LocationBased extends EventEmitter {
    * @param {THREE.Mesh} object the object
    * @param {number} lon - the longitude.
    * @param {number} lat - the latitude.
-   * @param {number} elev - the elevation in metres 
+   * @param {number} elev - the elevation in metres
    * (if not specified, 0 is assigned)
    * @param {Object} properties - properties describing the object (for example,
    * the contents of the GeoJSON properties field).
-   */ 
-  add(object, lon, lat, elev, properties = { }) {
+   */
+  add(object, lon, lat, elev, properties = {}) {
     object.properties = properties;
     this.#setWorldPosition(object, lon, lat, elev);
     this.scene.add(object);
     this.#serverLogger?.sendData("/object/new", {
       position: object.position,
       x: object.position.x,
-      z: object.position.z, 
+      z: object.position.z,
       session: this.#session,
-      properties
+      properties,
     });
   }
 
@@ -240,7 +240,7 @@ class LocationBased extends EventEmitter {
       lat: position.coords.latitude,
       lon: position.coords.longitude,
       acc: position.coords.accuracy,
-      session: this.#session
+      session: this.#session,
     });
     if (position.coords.accuracy &lt;= this.#gpsMinAccuracy) {
       if (this.#lastCoords === null) {
@@ -261,11 +261,11 @@ class LocationBased extends EventEmitter {
             position.coords.latitude
           );
           this.#serverLogger?.sendData("/worldorigin/new", {
-            gpsCount: this.#gpsCount, 
+            gpsCount: this.#gpsCount,
             lat: position.coords.latitude,
             lon: position.coords.longitude,
             session: this.#session,
-            initialPosition: this.#initialPosition
+            initialPosition: this.#initialPosition,
           });
         }
 
@@ -280,9 +280,9 @@ class LocationBased extends EventEmitter {
           cameraX: this.camera.position.x,
           cameraZ: this.camera.position.z,
           session: this.#session,
-          distMoved
+          distMoved,
         });
-      
+
         /**
          * GPS update event.
          * @event LocationBased#gpsupdate
@@ -290,7 +290,7 @@ class LocationBased extends EventEmitter {
          */
         this.emit("gpsupdate", { position, distMoved });
       }
-    } 
+    }
   }
 
   /**
@@ -310,6 +310,15 @@ class LocationBased extends EventEmitter {
     const angle = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return angle * 6371000;
   }
+
+  /**
+   * Obtain the last known GPS location.
+   *
+   * @return {Object} object containing latitude and longitude fields, or null if no previous GPS location.
+   */
+  getLastKnownLocation() {
+    return this.lastCoords;
+  }    
 }
 
 export default LocationBased;
@@ -329,7 +338,7 @@ export default LocationBased;
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Mon Aug 25 2025 14:24:26 GMT+0100 (British Summer Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Nov 15 2025 13:07:10 GMT+0000 (Greenwich Mean Time)
 </footer>
 
 <script> prettyPrint(); </script>

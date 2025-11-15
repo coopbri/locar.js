@@ -42,6 +42,21 @@ declare module "locar" {
   }
 
   /**
+   * GPS coordinates.
+   * Returned from `getLastKnownLocation()`
+   */
+  export interface LonLat {
+    /**
+     * Longitude.
+     */
+    longitude: number;
+    /**
+     * Latitude.
+     */
+    latitude: number;
+  } 
+
+  /**
    * Optional logger object passed to `LocationBased` for debug.
    */
   export interface ServerLogger {
@@ -112,6 +127,11 @@ declare module "locar" {
      * Set camera elevation (y).
      */
     setElevation(elev: number): void;
+
+    /**
+     * Gwet last known location.
+     */
+    getLastKnownLocation(): LonLat | null;
 
     /**
      * Events:
