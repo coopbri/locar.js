@@ -6,7 +6,8 @@
     "locar-aframe": "0.1.2"
   },
   "devDependencies": {
-    "vite": "^7.2.1"
+    "vite": "^7.2.1",
+    "vite-plugin-mkcert": "^1.17.9"
   },
   "scripts": {
     "dev": "vite dev",
