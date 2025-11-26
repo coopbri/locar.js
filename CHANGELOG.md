@@ -1,5 +1,9 @@
 # Updates
 
+## `0.1.5` (2025-11-26).
+
+Added ability to add multiple event handlers to an event, and remove a given event handler with the `off()` method.
+
 ## `0.1.4` (2025-11-15).
 
 Added `getLastKnownLocation() `method to `LocAR.LocationBased`, allowing retrieval of last known GPS location. Useful for example if you want to use fake GPS and retrieve the fake GPS location later.
