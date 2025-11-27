@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import EventEmitter from "./event-emitter";
 
+export type { WebcamStartedEvent, WebcamErrorEvent } from "../types/Webcam";
+
 /** Class to setup the webcam. */
 class Webcam extends EventEmitter {
   #video: HTMLVideoElement | null;
