@@ -27,7 +27,7 @@ import {
   Vector3
 } from "three";
 
-import EventEmitter from "./event-emitter.js";
+import EventEmitter from "./event-emitter";
 import {
   LOCAR_DEVICE_ORIENTATION_PERMISSION_MODAL,
   LOCAR_DEVICE_ORIENTATION_PERMISSION_BUTTON,

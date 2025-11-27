@@ -3,7 +3,7 @@ import Webcam from "./webcam.js";
 import SphMercProjection from "./sphmerc-projection.js";
 import DeviceOrientationControls from "./device-orientation-controls.js";
 import ClickHandler from "./click-handler.js";
-import EventEmitter from "./event-emitter.js";
+import EventEmitter from "./event-emitter";
 
 const version = "0.1.6";
 export {
