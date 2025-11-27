@@ -31,7 +31,12 @@ class LocationBased extends EventEmitter {
    * setGpsOptions() below.
    * @param {Object} serverLogger - an object which can optionally log GPS position to a server for debugging. null by default, so no logging will be done. This object should implement a sendData() method to send data (2nd arg) to a given endpoint (1st arg). Please see source code for details. Ensure you comply with privacy laws (GDPR or equivalent) if implementing this.
    */
-  constructor(scene: THREE.Scene, camera: THREE.Camera, options: GpsOptions = {}, serverLogger: ServerLogger | null = null) {
+  constructor(
+    scene: THREE.Scene,
+    camera: THREE.Camera,
+    options: GpsOptions = {},
+    serverLogger: ServerLogger | null = null,
+  ) {
     super();
     this.scene = scene;
     this.camera = camera;
@@ -102,7 +107,7 @@ class LocationBased extends EventEmitter {
         },
         {
           enableHighAccuracy: true,
-        }
+        },
       );
       return true;
     }
@@ -132,7 +137,12 @@ class LocationBased extends EventEmitter {
    * @param {number} acc - The accuracy of the GPS reading in metres. May be
    * ignored if lower than the specified minimum accuracy.
    */
-  fakeGps(lon: number, lat: number, elev: number | null = null, acc: number = 0) {
+  fakeGps(
+    lon: number,
+    lat: number,
+    elev: number | null = null,
+    acc: number = 0,
+  ) {
     if (elev !== null) {
       this.setElevation(elev);
     }
@@ -178,7 +188,13 @@ class LocationBased extends EventEmitter {
    * @param {Object} properties - properties describing the object (for example,
    * the contents of the GeoJSON properties field).
    */
-  add(object: THREE.Object3D, lon: number, lat: number, elev: number | undefined, properties: Record<string, any> = {}) {
+  add(
+    object: THREE.Object3D,
+    lon: number,
+    lat: number,
+    elev: number | undefined,
+    properties: Record<string, any> = {},
+  ) {
     (object as any).properties = properties;
     this.#setWorldPosition(object, lon, lat, elev);
     this.scene.add(object);
@@ -191,7 +207,12 @@ class LocationBased extends EventEmitter {
     });
   }
 
-  #setWorldPosition(object: THREE.Object3D, lon: number, lat: number, elev?: number) {
+  #setWorldPosition(
+    object: THREE.Object3D,
+    lon: number,
+    lat: number,
+    elev?: number,
+  ) {
     const worldCoords = this.lonLatToWorldCoords(lon, lat);
     if (elev !== undefined) {
       object.position.y = elev;
@@ -211,7 +232,7 @@ class LocationBased extends EventEmitter {
     this.#initialPosition = this.#proj.project(lon, lat);
   }
 
-  #gpsReceived(position: GeolocationPosition ) {
+  #gpsReceived(position: GeolocationPosition) {
     let distMoved = Number.MAX_VALUE;
     this.#gpsCount++;
     this.#serverLogger?.sendData("/gps/new", {
@@ -237,7 +258,7 @@ class LocationBased extends EventEmitter {
         if (!this.#initialPosition) {
           this.#setWorldOrigin(
             position.coords.longitude,
-            position.coords.latitude
+            position.coords.latitude,
           );
           this.#serverLogger?.sendData("/worldorigin/new", {
             gpsCount: this.#gpsCount,
@@ -251,7 +272,7 @@ class LocationBased extends EventEmitter {
         this.#setWorldPosition(
           this.camera,
           position.coords.longitude,
-          position.coords.latitude
+          position.coords.latitude,
         );
 
         this.#serverLogger?.sendData("/gps/accepted", {
@@ -297,7 +318,7 @@ class LocationBased extends EventEmitter {
    */
   getLastKnownLocation() {
     return this.#lastCoords;
-  }    
+  }
 }
 
 export default LocationBased;
