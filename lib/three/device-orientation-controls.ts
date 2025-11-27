@@ -18,7 +18,15 @@
  * W3C Device Orientation control (http://w3c.github.io/deviceorientation/spec-source-orientation.html)
  */
 
-import { Euler, EventDispatcher, MathUtils, Quaternion, Vector3 } from "three";
+import {
+  Euler,
+  EventDispatcher,
+  MathUtils,
+  Object3D,
+  Quaternion,
+  Vector3
+} from "three";
+
 import EventEmitter from "./event-emitter.js";
 import {
   LOCAR_DEVICE_ORIENTATION_PERMISSION_MODAL,
@@ -42,7 +50,59 @@ const _euler = new Euler();
 const _q0 = new Quaternion();
 const _q1 = new Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // - PI/2 around the x-axis
 
+
+const TWO_PI: number = 2 * Math.PI;
+const HALF_PI: number = 0.5 * Math.PI;
+
+type DeviceOrientationEventWithCompass = DeviceOrientationEvent & { webkitCompassHeading?: number };
+
+type DeviceOrientationControlsOptions = {
+  smoothingFactor?: number;
+  orientationChangeThreshold?: number;
+  enablePermissionDialog?: boolean;
+  enableStyling?: boolean;
+  preferConfirmDialog?: boolean;
+};
+
 class DeviceOrientationControls extends EventDispatcher {
+  eventEmitter: EventEmitter;
+  object: Object3D;
+  enabled: boolean;
+  deviceOrientation: {
+    alpha?: number;
+    beta?: number;
+    gamma?: number;
+    webkitCompassHeading?: number;
+    absolute?: boolean;
+  } | null;
+  screenOrientation: number;
+  alphaOffset: number;
+  orientationOffset: number;
+  initialOffset: boolean | null;
+  lastCompassY: number | undefined;
+  lastOrientation: { alpha: number; beta: number; gamma: number } | null;
+  orientationChangeEventName: "deviceorientation" | "deviceorientationabsolute";
+  smoothingFactor: number;
+  enablePermissionDialog: boolean;
+  enableInlineStyling: boolean;
+  preferConfirmDialog: boolean;
+  orientationChangeThreshold: number;
+  connect: () => void;
+  disconnect: () => void;
+  requestOrientationPermissions: () => void;
+  update: () => void;
+  getCorrectedHeading: () => number;
+  _calcAngleWithThreshold: (a: number, b: number) => number;
+  _orderAngle: (a: number, b: number, range?: number) => { left: number; right: number };
+  _getSmoothedAngle: (a: number, b: number, k: number, range?: number) => number;
+  updateAlphaOffset: () => void;
+  dispose: () => void;
+  getAlpha: () => number;
+  getBeta: () => number;
+  getGamma: () => number;
+  createObtainPermissionGestureDialog: () => void;
+  obtainPermissionGesture: () => void;
+
   /**
    * Create an instance of DeviceOrientationControls.
    * @param {Object} object - the object to attach the controls to
@@ -50,7 +110,7 @@ class DeviceOrientationControls extends EventDispatcher {
    * @param {Object} options - options for DeviceOrientationControls: 
    * currently accepts smoothingFactor (< 1), enablePermissionDialog, orientationChangeThreshold (radians)
    */
-  constructor(object, options = {}) {
+  constructor(object: Object3D, options: DeviceOrientationControlsOptions = {}) {
     super();
     this.eventEmitter = new EventEmitter();
 
@@ -71,8 +131,6 @@ class DeviceOrientationControls extends EventDispatcher {
     this.lastCompassY = undefined;
     this.lastOrientation = null;
 
-    this.TWO_PI = 2 * Math.PI;
-    this.HALF_PI = 0.5 * Math.PI;
     this.orientationChangeEventName =
       "ondeviceorientationabsolute" in window
         ? "deviceorientationabsolute"
@@ -84,12 +142,13 @@ class DeviceOrientationControls extends EventDispatcher {
     this.preferConfirmDialog = options.preferConfirmDialog ?? false;
     this.orientationChangeThreshold = options.orientationChangeThreshold ?? 0; // radians
 
-    const onDeviceOrientationChangeEvent = function ({
-      alpha,
-      beta,
-      gamma,
-      webkitCompassHeading,
-    }) {
+    const onDeviceOrientationChangeEvent = (event: DeviceOrientationEventWithCompass) => {
+      let { alpha, beta, gamma, webkitCompassHeading } = event;
+      alpha = alpha ?? 0;
+      beta = beta ?? 0;
+      gamma = gamma ?? 0;
+      webkitCompassHeading = webkitCompassHeading ?? 0;
+
       if (isIOS) {
         const ccwNorthHeading = 360 - webkitCompassHeading;
         scope.alphaOffset = MathUtils.degToRad(ccwNorthHeading - alpha);
@@ -105,26 +164,26 @@ class DeviceOrientationControls extends EventDispatcher {
       );
     };
 
-    const onScreenOrientationChangeEvent = function () {
-      scope.screenOrientation = window.orientation || 0;
+    const onScreenOrientationChangeEvent = () => {
+      scope.screenOrientation = window.screen.orientation?.angle ?? 0;
       if (isIOS) {
         if (scope.screenOrientation === 90) {
-          scope.orientationOffset = -scope.HALF_PI;
+          scope.orientationOffset = -HALF_PI;
         } else if (scope.screenOrientation === -90) {
-          scope.orientationOffset = scope.HALF_PI;
+          scope.orientationOffset = HALF_PI;
         } else {
           scope.orientationOffset = 0;
         }
       }
     };
 
-    const setObjectQuaternion = function (
-      quaternion,
-      alpha,
-      beta,
-      gamma,
-      orient
-    ) {
+    const setObjectQuaternion = (
+      quaternion: Quaternion,
+      alpha: number,
+      beta: number,
+      gamma: number,
+      orient: number
+    ) => {
       _euler.set(beta, alpha, -gamma, "YXZ"); // 'ZXY' for the device, but 'YXZ' for us
 
       quaternion.setFromEuler(_euler); // orient the device
@@ -143,7 +202,7 @@ class DeviceOrientationControls extends EventDispatcher {
      * This is a breaking change and now means that you need to call connect()
      * yourself - previously it was done automatically.
      */
-    this.connect = function () {
+    this.connect = () => {
       onScreenOrientationChangeEvent(); // run once on load
 
       window.addEventListener(
@@ -158,7 +217,7 @@ class DeviceOrientationControls extends EventDispatcher {
       scope.enabled = true;
     };
 
-    this.disconnect = function () {
+    this.disconnect = () => {
       window.removeEventListener(
         "orientationchange",
         onScreenOrientationChangeEvent
@@ -178,13 +237,13 @@ class DeviceOrientationControls extends EventDispatcher {
     // see obtainPermissionGesture() below.
     // This is therefore tightly coupled to obtainPermissionGesture(), thus is
     // called directly from it.
-    this.requestOrientationPermissions = function () {
+    this.requestOrientationPermissions = () => {
       if (
         window.DeviceOrientationEvent !== undefined &&
-        typeof window.DeviceOrientationEvent.requestPermission === "function"
+        typeof (window.DeviceOrientationEvent as any).requestPermission === "function"
       ) {
-        window.DeviceOrientationEvent.requestPermission()
-          .then((response) => {
+        (window.DeviceOrientationEvent as any).requestPermission()
+          .then((response: string) => {
             if (response === "granted") {
               // Emit the "deviceorientationgranted" event: calls to connect()
               // would typically be done from this event's handler
@@ -209,7 +268,7 @@ class DeviceOrientationControls extends EventDispatcher {
               });
             }
           })
-          .catch(function (error) {
+          .catch((error: any) => {
             this.eventEmitter.emit("deviceorientationerror", {
               code: "LOCAR_DEVICE_ORIENTATION_PERMISSION_FAILED",
               message:
@@ -227,8 +286,7 @@ class DeviceOrientationControls extends EventDispatcher {
       }
     };
 
-    // eslint-disable-next-line no-unused-vars
-    this.update = function ({ theta: s = 0 } = { theta: 0 }) {
+    this.update = () => {
       if (scope.enabled === false) return;
       const device = scope.deviceOrientation;
 
@@ -259,14 +317,14 @@ class DeviceOrientationControls extends EventDispatcher {
               k
             );
             gamma = scope._getSmoothedAngle(
-              gamma + scope.HALF_PI,
+              gamma + HALF_PI,
               scope.lastOrientation.gamma,
               k,
               Math.PI
             );
           } else {
-            beta += Math.PI;
-            gamma += scope.HALF_PI;
+            beta += Math.PI
+            gamma += HALF_PI;
           }
         }
 
@@ -291,7 +349,7 @@ class DeviceOrientationControls extends EventDispatcher {
             "YXZ"
           );
 
-          let compassY = MathUtils.degToRad(360 - device.webkitCompassHeading);
+          let compassY = MathUtils.degToRad(360 - (device.webkitCompassHeading ?? 0));
 
           if (scope.smoothingFactor < 1 && scope.lastCompassY !== void 0) {
             compassY = scope._getSmoothedAngle(
@@ -313,7 +371,7 @@ class DeviceOrientationControls extends EventDispatcher {
             scope.object.quaternion,
             isIOS ? alpha + scope.alphaOffset : alpha,
             scope.smoothingFactor < 1 ? beta - Math.PI : beta,
-            scope.smoothingFactor < 1 ? gamma - Math.PI / 2 : gamma,
+            scope.smoothingFactor < 1 ? gamma - HALF_PI : gamma,
             orient
           );
         }
@@ -325,7 +383,7 @@ class DeviceOrientationControls extends EventDispatcher {
       }
     };
 
-    this.getCorrectedHeading = function () {
+    this.getCorrectedHeading = () => {
       const { deviceOrientation: device } = scope;
       if (!device) return 0;
 
@@ -333,7 +391,7 @@ class DeviceOrientationControls extends EventDispatcher {
 
       if (isIOS) {
         // iOS always uses webkitCompassHeading
-        heading = 360 - device.webkitCompassHeading;
+        heading = 360 - (device.webkitCompassHeading ?? 0);
         if (scope.orientationOffset) {
           heading += scope.orientationOffset * (180 / Math.PI);
           heading = (heading + 360) % 360;
@@ -357,12 +415,12 @@ class DeviceOrientationControls extends EventDispatcher {
       return heading;
     };
 
-    this._calcAngleWithThreshold = function (a, b) {
+    this._calcAngleWithThreshold = (a: number, b: number) => {
       return Math.abs(a - b) < scope.orientationChangeThreshold ? b : a;
     };
 
     // NW Added
-    this._orderAngle = function (a, b, range = scope.TWO_PI) {
+    this._orderAngle = (a: number, b: number, range = TWO_PI) => {
       if (
         (b > a && Math.abs(b - a) < range / 2) ||
         (a > b && Math.abs(b - a) > range / 2)
@@ -374,7 +432,7 @@ class DeviceOrientationControls extends EventDispatcher {
     };
 
     // NW Added
-    this._getSmoothedAngle = function (a, b, k, range = scope.TWO_PI) {
+    this._getSmoothedAngle = (a: number, b: number, k: number, range = TWO_PI) => {
       const angles = scope._orderAngle(a, b, range);
       const angleshift = angles.left;
       const origAnglesRight = angles.right;
@@ -391,16 +449,16 @@ class DeviceOrientationControls extends EventDispatcher {
     };
 
     // Provided in fix on issue #466 (main AR.js) - iOS related
-    this.updateAlphaOffset = function () {
+    this.updateAlphaOffset = () => {
       scope.initialOffset = false;
     };
 
-    this.dispose = function () {
+    this.dispose = () => {
       scope.disconnect();
     };
 
     // provided with fix on issue #466 (main AR.js)
-    this.getAlpha = function () {
+    this.getAlpha = () => {
       const { deviceOrientation: device } = scope;
       return device && device.alpha
         ? MathUtils.degToRad(device.alpha) + scope.alphaOffset
@@ -408,12 +466,12 @@ class DeviceOrientationControls extends EventDispatcher {
     };
 
     // provided with fix on issue #466 (main AR.js)
-    this.getBeta = function () {
+    this.getBeta = () => {
       const { deviceOrientation: device } = scope;
       return device && device.beta ? MathUtils.degToRad(device.beta) : 0;
     };
 
-    this.getGamma = function () {
+    this.getGamma = () => {
       const { deviceOrientation: device } = scope;
       return device && device.gamma ? MathUtils.degToRad(device.gamma) : 0;
     };
@@ -421,7 +479,7 @@ class DeviceOrientationControls extends EventDispatcher {
     // Provide gesture before initialising device orientation controls
     // From PR #659 on the main AR.js repo
     // Thanks to @ma2yama
-    this.createObtainPermissionGestureDialog = function () {
+    this.createObtainPermissionGestureDialog = () => {
       // Add all the elements and a common class names to all elements
       // to allow external styling
       const startModal = document.createElement("div");
@@ -444,74 +502,49 @@ class DeviceOrientationControls extends EventDispatcher {
       // Apply inline styling if required, the styling tries to resemble
       // a native ios dialog as closely as possible
       if (this.enableInlineStyling === true) {
-        const startModalStyles = {
-          fontFamily:
-            "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'",
-          display: "flex",
-          position: "fixed",
-          zIndex: 100000,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: "rgba(0,0,0,0.2)",
-          inset: 0,
-          padding: "20px",
-        };
 
-        const innerDivStyles = {
-          backgroundColor: "rgba(220, 220, 220, 0.85)",
-          padding: "6px 0",
-          borderRadius: "10px",
-          width: "100%",
-          maxWidth: "400px",
-        };
+        startModal.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'";
+        startModal.style.display = "flex";
+        startModal.style.position = "fixed";
+        startModal.style.zIndex = "100000";
+        startModal.style.justifyContent = "center";
+        startModal.style.alignItems = "center";
+        startModal.style.backgroundColor = "rgba(0,0,0,0.2)";
+        startModal.style.inset = "0";
+        startModal.style.padding = "20px";
 
-        const msgDivStyles = {
-          padding: "10px 12px",
-          textAlign: "center",
-          fontWeight: 400,
-          fontSize: "13px",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        };
+        innerDiv.style.backgroundColor = "rgba(220, 220, 220, 0.85)";
+        innerDiv.style.padding = "6px 0";
+        innerDiv.style.borderRadius = "10px";
+        innerDiv.style.width = "100%";
+        innerDiv.style.maxWidth = "400px";
 
-        const btnDivStyles = {
-          display: "block",
-          textAlign: "center",
-          textDecoration: "none",
-          borderTop: "rgb(180,180,180) solid 1px",
-        };
+        msgDiv.style.padding = "10px 12px";
+        msgDiv.style.textAlign = "center";
+        msgDiv.style.fontWeight = "400";
+        msgDiv.style.fontSize = "13px";
+        msgDiv.style.display = "flex";
+        msgDiv.style.justifyContent = "center";
+        msgDiv.style.alignItems = "center";
 
-        const btnStyles = {
-          display: "block",
-          width: "100%",
-          textAlign: "center",
-          appearance: "none",
-          background: "none",
-          border: "none",
-          outline: "none",
-          padding: "10px",
-          fontWeight: 400,
-          fontSize: "16px",
-          color: "#2e7cf1",
-          cursor: "pointer",
-        };
 
-        for (let key in startModalStyles) {
-          startModal.style[key] = startModalStyles[key];
-        }
-        for (let key in innerDivStyles) {
-          innerDiv.style[key] = innerDivStyles[key];
-        }
-        for (let key in msgDivStyles) {
-          msgDiv.style[key] = msgDivStyles[key];
-        }
-        for (let key in btnDivStyles) {
-          btnDiv.style[key] = btnDivStyles[key];
-        }
-        for (let key in btnStyles) {
-          btn.style[key] = btnStyles[key];
-        }
+        btnDiv.style.display = "block";
+        btnDiv.style.textAlign = "center";
+        btnDiv.style.textDecoration = "none";
+        btnDiv.style.borderTop = "rgb(180,180,180) solid 1px";
+
+        btn.style.display = "block";
+        btn.style.width = "100%";
+        btn.style.textAlign = "center";
+        btn.style.appearance = "none";
+        btn.style.background = "none";
+        btn.style.border = "none";
+        btn.style.outline = "none";
+        btn.style.padding = "10px";
+        btn.style.fontWeight = "400";
+        btn.style.fontSize = "16px";
+        btn.style.color = "#2e7cf1";
+        btn.style.cursor = "pointer";
       }
 
       startModal.appendChild(innerDiv);
@@ -533,7 +566,7 @@ class DeviceOrientationControls extends EventDispatcher {
       document.body.appendChild(startModal);
     };
 
-    this.obtainPermissionGesture = function () {
+    this.obtainPermissionGesture = () => {
       // Create a simple ok/cancel confirm() dialog instead of creating an html one
       // if defined in the options, otherwise create the html dialog as above
       if (this.preferConfirmDialog === true) {
@@ -546,7 +579,7 @@ class DeviceOrientationControls extends EventDispatcher {
     };
   }
 
-  on(eventName, eventHandler) {
+  on(eventName: string, eventHandler: (event: any) => void) {
     this.eventEmitter.on(eventName, eventHandler);
   }
 
@@ -557,7 +590,7 @@ class DeviceOrientationControls extends EventDispatcher {
    * event handlers.
    */
 
-  init() {
+  init = () => {
     if (window.DeviceOrientationEvent === undefined) {
       this.eventEmitter.emit("deviceorientationerror", {
         code: "LOCAR_DEVICE_ORIENTATION_NOT_SUPPORTED",
@@ -572,7 +605,7 @@ class DeviceOrientationControls extends EventDispatcher {
     } else {
       // Option to handle iOS permissions and connecting elsewhere
       const isiOSWithReq =
-        typeof window.DeviceOrientationEvent.requestPermission === "function";
+        typeof (window.DeviceOrientationEvent as any).requestPermission === "function";
 
       if (isiOSWithReq && this.enablePermissionDialog) {
         this.obtainPermissionGesture();
