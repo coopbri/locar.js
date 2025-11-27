@@ -5,7 +5,7 @@ import DeviceOrientationControls from "./device-orientation-controls";
 import ClickHandler from "./click-handler";
 import EventEmitter from "./event-emitter";
 
-const version = "0.1.6";
+const version = "0.1.7";
 export {
   LocationBased,
   Webcam,
