@@ -1,9 +1,10 @@
 import SphMercProjection from "./sphmerc-projection";
 import EventEmitter from "./event-emitter";
 import * as THREE from "three";
-import { LonLat, ServerLogger } from "locar";
+import type { LonLat } from "../types/LonLat";
+import type { ServerLogger } from "../types/ServerLogger";
 
-interface GpsOptions {
+export interface GpsOptions {
   gpsMinDistance?: number;
   gpsMinAccuracy?: number;
 }
