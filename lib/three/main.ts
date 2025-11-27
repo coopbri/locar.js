@@ -1,5 +1,5 @@
 import LocationBased from "./location-based.js";
-import Webcam from "./webcam.js";
+import Webcam from "./webcam";
 import SphMercProjection from "./sphmerc-projection.js";
 import DeviceOrientationControls from "./device-orientation-controls.js";
 import ClickHandler from "./click-handler.js";
