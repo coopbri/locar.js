@@ -34,8 +34,7 @@ window.addEventListener("resize", ev => {
 let firstLocation = true;
 
 let deviceOrientationControls = new LocAR.DeviceOrientationControls(
-    camera, 
-    { orientationChangeThreshold: 0.005 }
+    camera
 );
 
 deviceOrientationControls.on("deviceorientationgranted", ev => {
